@@ -5,7 +5,7 @@ import "@tensorflow/tfjs-backend-webgl";
 // import * as faceapi from "@tensorflow-models/face-detection";
 import * as facelandmark from "@tensorflow-models/face-landmarks-detection";
 import rough from "roughjs";
-import { TRIANGULATION } from "./triangulation";
+import { TRIANGULATION_INDEX } from "./triangulation";
 import { Point } from "roughjs/bin/geometry";
 
 const generator = rough.generator();
@@ -24,12 +24,6 @@ function App() {
   useEffect(() => {
     const loadModel = async () => {
       setModelLoaded(false);
-      // modelRef.current = await faceapi.createDetector(
-      //   faceapi.SupportedModels.MediaPipeFaceDetector,
-      //   {
-      //     runtime: "tfjs",
-      //   }
-      // );
       const model = facelandmark.SupportedModels.MediaPipeFaceMesh;
       const detectorConfig: facelandmark.MediaPipeFaceMeshMediaPipeModelConfig =
         {
@@ -74,36 +68,21 @@ function App() {
         ctx?.clearRect(0, 0, canvas.width, canvas.height);
         const roughCanvas = rough.canvas(canvas);
         detections?.map((detection) => {
-          const detectionRect = generator.rectangle(
-            detection.box.xMin,
-            detection.box.yMin,
-            detection.box.width,
-            detection.box.height
-          );
           let j = 0;
-          const facialPoints: Array<Array<Array<number>>> = [];
-          while (j < TRIANGULATION.length - 2) {
-            const firstPoint = [
-              detection.keypoints[TRIANGULATION[j]].x,
-              detection.keypoints[TRIANGULATION[j]].y,
-            ];
-            const secondPoint = [
-              detection.keypoints[TRIANGULATION[j + 1]].x,
-              detection.keypoints[TRIANGULATION[j + 1]].y,
-            ];
-            const thirdPoint = [
-              detection.keypoints[TRIANGULATION[j + 2]].x,
-              detection.keypoints[TRIANGULATION[j + 2]].y,
-            ];
-            facialPoints.push([firstPoint, secondPoint, thirdPoint]);
+          const facialPoints: Array<Array<Point>> = [];
+          while (j < TRIANGULATION_INDEX.length - 2) {
+            facialPoints.push(
+              TRIANGULATION_INDEX.slice(j, j + 3).map((triangleIndex) => [
+                detection.keypoints[triangleIndex].x,
+                detection.keypoints[triangleIndex].y,
+              ])
+            );
             j += 3;
           }
           for (const point of facialPoints) {
             const pol = generator.polygon(point as Point[]);
             roughCanvas.draw(pol);
           }
-
-          roughCanvas.draw(detectionRect);
         });
       }
     }
@@ -148,7 +127,7 @@ function App() {
       </div>
       <div className="video-container">
         <canvas
-          className="detection-canvas"
+          className="landmark-canvas"
           ref={canvasRef}
           width="640"
           height="480"
